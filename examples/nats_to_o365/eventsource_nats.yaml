@@ -1,0 +1,33 @@
+apiVersion: argoproj.io/v1alpha1
+kind: EventSource
+metadata:
+  name: nats-js-source
+spec:
+  template:
+    metadata:
+      labels:
+        app: nats-js-event-source
+  generic:
+    example:
+      insecure: true
+
+      # Host and port where the generic EventSource service is running
+      url: <EVENTSOURCE_HOST>:<PORT>
+
+      # Needs to be set to true, otherwise the EventSource
+      # client started by argo won't properly decode the nats
+      # message payload from our generic service
+      jsonBody: true
+
+      # the config that is sent to the generic service to
+      # register this EventSource stream
+      config: |-
+        url: <NATS-JETSTREAM-SERVER>:4222
+        jsonBody: true
+        stream: <STREAM_NAME>
+        subjects:
+          - some.subject.we.want.to.consume.>
+        tls:
+          insecureSkipVerify: true
+        metadata:
+          foo: bar

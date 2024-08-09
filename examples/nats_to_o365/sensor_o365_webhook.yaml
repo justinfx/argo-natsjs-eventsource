@@ -1,0 +1,77 @@
+apiVersion: argoproj.io/v1alpha1
+kind: Sensor
+metadata:
+  name: nats-js-to-o365
+  labels:
+    app: nats-js-event-source
+spec:
+  template:
+    metadata:
+      labels:
+        app: nats-js-event-source
+  dependencies:
+    - name: test-dep
+      eventSourceName: nats-js-source
+      eventName: example
+      transform:
+        # The reason we see .body.body being used is because:
+        #   .body: is the body of the CloudEvent that is delivered
+        #          from the EventSource, where there is also a .context field
+        #   .body.body: references the NATSJSEventData "body" field
+        #          that contains the message body from the Nats message,
+        #          where there are other fields like .body.stream or
+        #          .body.seq_id
+        jq: >
+          .body.markdown = true |
+          .body.sections = [{
+            "title": "Stream: \(.body.stream) (seq:\(.body.seq_id))",
+            "text": .body.body.message,
+            "markdown": true
+          }]
+  triggers:
+    - template:
+        name: o365-trigger
+        http:
+          url: WILL_BE_REPLACED_BY_WEBHOOK_FROM_EVENT
+          method: POST
+          tls:
+            insecureSkipVerify: true
+          headers:
+            Content-Type: application/json
+          payload:
+            - src:
+                dependencyName: test-dep
+                value: MessageCard
+              dest: "@type"
+            - src:
+                dependencyName: test-dep
+                value: https://schema.org/extensions
+              dest: "@context"
+            - src:
+                dependencyName: test-dep
+                # reaching into the field details of the nats message payload
+                dataTemplate: >-
+                  {{ .Input.body.body.title | default "<No Title>" }}
+              dest: title
+            - src:
+                dependencyName: test-dep
+                # reaching into the field details of the nats message payload
+                dataTemplate: >-
+                  {{ .Input.body.body.title | default "<No Title>" }}
+              dest: summary
+            - src:
+                dependencyName: test-dep
+                dataKey: body.markdown
+                useRawData: true
+              dest: markdown
+            - src:
+                dependencyName: test-dep
+                dataKey: body.sections
+                useRawData: true
+              dest: sections
+      parameters:
+        - src:
+            dependencyName: test-dep
+            # reaching into the field details of the nats message payload
+            dataKey: body.body.webhook
+          dest: http.url
