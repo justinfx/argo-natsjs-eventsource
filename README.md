@@ -1,5 +1,7 @@
 # Argo NATS Jetstream EventSource
 
+[![Docker Image Version](https://img.shields.io/docker/v/justinisrael/argo-natsjs-eventsource?label=Docker)](https://hub.docker.com/r/justinisrael/argo-natsjs-eventsource/tags)
+
 A "generic" Argo EventSource implementation supporting NATS Jetstream
 
 See: https://argoproj.github.io/argo-events/eventsources/generic/
