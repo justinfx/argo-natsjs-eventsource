@@ -140,7 +140,7 @@ func (n *NATSJSEventSource) StartEventSource(src *proto.EventSource, svr proto.E
 		if errors.Is(err, jetstream.ErrStreamNotFound) {
 			return logErr(fmt.Errorf(
 				"failed to create nats jetstream consumer for event source %s, "+
-					"configured stream \"%s\" does not exist on server \"%s\", %w",
+					"configured stream %q does not exist on server %q, %w",
 				src.Name, esCfg.Stream, esCfg.URL, err))
 		}
 	}
