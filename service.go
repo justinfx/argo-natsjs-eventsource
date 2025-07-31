@@ -310,7 +310,15 @@ func (n *NATSJSEventSource) StartEventSource(src *proto.EventSource, svr proto.E
 		}
 	}
 
-	consumerCtx, err := consumer.Consume(handler)
+	errChan := make(chan error, 1)
+	errHandler := func(consumeCtx jetstream.ConsumeContext, err error) {
+		if err == jetstream.ErrConsumerDeleted || err == jetstream.ErrStreamNotFound {
+			consumeCtx.Stop()
+			errChan <- err
+		}
+	}
+
+	consumerCtx, err := consumer.Consume(handler, jetstream.ConsumeErrHandler(errHandler))
 	if err != nil {
 		return logErr(fmt.Errorf("error consuming messages: %w", err))
 	}
@@ -333,14 +341,19 @@ func (n *NATSJSEventSource) StartEventSource(src *proto.EventSource, svr proto.E
 			return
 		}
 		consumerCtx.Stop()
-		consumerCtx, err = consumer.Consume(handler)
+		consumerCtx, err = consumer.Consume(handler, jetstream.ConsumeErrHandler(errHandler))
 		if err != nil {
 			consumerErr = logErr(fmt.Errorf("error consuming messages: %w", err))
 		}
 	}
 
-	<-ctx.Done()
-	return consumerErr
+	select {
+	case <-ctx.Done():
+		return consumerErr
+	case err:= <-errChan:
+		return err
+	}
+
 }
 
 func (n *NATSJSEventSource) addTLSOptions(cfg *NATSJSEventSourceCfg, opt *[]nats.Option) error {
