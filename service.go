@@ -312,9 +312,9 @@ func (n *NATSJSEventSource) StartEventSource(src *proto.EventSource, svr proto.E
 
 	errChan := make(chan error, 1)
 	errHandler := func(consumeCtx jetstream.ConsumeContext, err error) {
-		if err == jetstream.ErrConsumerDeleted || err == jetstream.ErrStreamNotFound {
+		if errors.Is(err, jetstream.ErrConsumerDeleted) || errors.Is(err, jetstream.ErrStreamNotFound) {
 			consumeCtx.Stop()
-			errChan <- err
+			errChan <- logErr(fmt.Errorf("Consumer error: %w", err))
 		}
 	}
 
@@ -350,7 +350,7 @@ func (n *NATSJSEventSource) StartEventSource(src *proto.EventSource, svr proto.E
 	select {
 	case <-ctx.Done():
 		return consumerErr
-	case err:= <-errChan:
+	case err := <-errChan:
 		return err
 	}
 
